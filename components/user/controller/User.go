@@ -20,8 +20,7 @@ type UserController struct {
 }
 
 // NewUserController returns new instance of UserController
-func NewUserController(userService *service.UserService,
-	log log.Log) *UserController {
+func NewUserController(userService *service.UserService, log log.Log) *UserController {
 	return &UserController{
 		service: userService,
 		log:     log,
@@ -31,8 +30,8 @@ func (controller *UserController) RegisterRoutes(router *mux.Router) {
 	userRouter := router.PathPrefix("/user").Subrouter()
 	userRouter.HandleFunc("/register", controller.RegisterUser).Methods(http.MethodPost)
 	userRouter.HandleFunc("/", controller.GetAllUsers).Methods(http.MethodGet)
-	userRouter.HandleFunc("/:id", controller.UpdateUser).Methods(http.MethodPut)
-	userRouter.HandleFunc("/:id", controller.DeleteUser).Methods(http.MethodDelete)
+	userRouter.HandleFunc("/{id}", controller.UpdateUser).Methods(http.MethodPut)
+	userRouter.HandleFunc("/{id}", controller.DeleteUser).Methods(http.MethodDelete)
 	fmt.Println("==============================userRegisterRoutes==========================")
 }
 func (controller *UserController) RegisterUser(w http.ResponseWriter, r *http.Request) {
@@ -69,16 +68,19 @@ func (controller *UserController) GetAllUsers(w http.ResponseWriter, r *http.Req
 func (controller *UserController) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("==============================userToUpdate==========================")
 	userToUpdate := user.User{}
+
 	// Unmarshal JSON.
+	fmt.Println(r.Body)
 	err := web.UnmarshalJSON(r, &userToUpdate)
 	if err != nil {
+		fmt.Println("==============================err from UnmarshalJSON==========================")
 		controller.log.Print(err.Error())
 		web.RespondError(w, errors.NewHTTPError(err.Error(), http.StatusBadRequest))
 		return
 	}
 	vars := mux.Vars(r)
 
-	intID, err := strconv.Atoi(vars["i"])
+	intID, err := strconv.Atoi(vars["id"])
 	if err != nil {
 		controller.log.Print(err)
 		web.RespondError(w, errors.NewHTTPError(err.Error(), http.StatusBadRequest))
@@ -98,5 +100,23 @@ func (controller *UserController) UpdateUser(w http.ResponseWriter, r *http.Requ
 	web.RespondJSON(w, http.StatusOK, userToUpdate)
 }
 func (controller *UserController) DeleteUser(w http.ResponseWriter, r *http.Request) {
-	web.RespondJSON(w, http.StatusOK, "DeleteUser successfull.")
+
+	controller.log.Print("********************************DeleteTest call**************************************")
+	usetToDelete := user.User{}
+	var err error
+	vars := mux.Vars(r)
+	intID, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		controller.log.Print(err)
+		web.RespondError(w, errors.NewHTTPError(err.Error(), http.StatusBadRequest))
+		return
+	}
+	usetToDelete.ID = uint(intID)
+	err = controller.service.DeleteUser(&usetToDelete)
+	if err != nil {
+		controller.log.Print(err.Error())
+		web.RespondError(w, err)
+		return
+	}
+	web.RespondJSON(w, http.StatusOK, "Delete User successfull.")
 }

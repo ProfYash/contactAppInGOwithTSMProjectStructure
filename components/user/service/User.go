@@ -4,6 +4,7 @@ import (
 	"contactApp/errors"
 	"contactApp/models/user"
 	"contactApp/repository"
+	"time"
 
 	"github.com/jinzhu/gorm"
 )
@@ -62,7 +63,7 @@ func (service *UserService) UpdateUser(userToUpdate *user.User) error {
 		return err
 	}
 	userToUpdate.CreatedAt = tempUser.CreatedAt
-	
+
 	err = service.repository.Save(uow, userToUpdate)
 	if err != nil {
 		return err
@@ -77,5 +78,26 @@ func (service *UserService) doesUserExist(ID uint) error {
 	if !exists || err != nil {
 		return errors.NewValidationError("User ID is Invalid")
 	}
+	return nil
+}
+func (service *UserService) DeleteUser(userToDelete *user.User) error {
+	err := service.doesUserExist(userToDelete.ID)
+	if err != nil {
+		return err
+	}
+
+	uow := repository.NewUnitOfWork(service.db, false)
+	defer uow.RollBack()
+
+	// Update test for updating deleted_by and deleted_at fields of test
+	if err := service.repository.UpdateWithMap(uow, userToDelete, map[string]interface{}{
+
+		"DeletedAt": time.Now(),
+	},
+		repository.Filter("`id`=?", userToDelete.ID)); err != nil {
+		uow.RollBack()
+		return err
+	}
+	uow.Commit()
 	return nil
 }

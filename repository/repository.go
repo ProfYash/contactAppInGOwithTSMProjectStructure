@@ -10,6 +10,7 @@ type Repository interface {
 	GetAll(uow *UnitOfWork, out interface{}, queryProcessor ...QueryProcessor) error
 	Add(uow *UnitOfWork, out interface{}) error
 	Update(uow *UnitOfWork, out interface{}) error
+	UpdateWithMap(uow *UnitOfWork, model interface{}, value map[string]interface{}, queryProcessors ...QueryProcessor) error
 	GetRecordForUser(uow *UnitOfWork, userID uint, out interface{}, queryProcessors ...QueryProcessor) error
 	Save(uow *UnitOfWork, value interface{}) error
 }
@@ -139,4 +140,13 @@ func (repository *GormRepository) GetRecord(uow *UnitOfWork, out interface{}, qu
 		return err
 	}
 	return db.Debug().First(out).Error
+}
+func (repository *GormRepository) UpdateWithMap(uow *UnitOfWork, model interface{}, value map[string]interface{},
+	queryProcessors ...QueryProcessor) error {
+	db := uow.DB
+	db, err := executeQueryProcessors(db, value, queryProcessors...)
+	if err != nil {
+		return err
+	}
+	return db.Debug().Model(model).Update(value).Error
 }
